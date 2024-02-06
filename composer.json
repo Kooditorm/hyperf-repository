@@ -1,0 +1,22 @@
+{
+  "name": "kooditorm/hyperf-repository",
+  "description": "hyperf - Repositories to the database layer",
+  "keywords": [
+    "hyperf",
+    "repository",
+    "model",
+    "eloquent"
+  ],
+  "homepage": "https://github.com/Kooditorm/hyperf-repository",
+  "license": "MIT",
+  "author": [
+    {
+      "name": "oswin hu",
+      "email": "oswin-hu@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4"
+  },
+  "autoload": {
+}
