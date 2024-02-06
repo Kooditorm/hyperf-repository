@@ -16,7 +16,18 @@
     }
   ],
   "require": {
-    "php": ">=7.4"
+    "php": ">=8.0",
+    "hyperf/collection": "~3.0.0",
+    "hyperf/di": "~3.0.0",
+    "hyperf/db-connection": "~v3.0.0"
+  }
+  ,
+  "require-dev": {
+    "roave/security-advisories": "dev-latest"
   },
   "autoload": {
+    "psr-4": {
+      "Kooditorm\\Repository\\": "src/"
+    }
+  }
 }

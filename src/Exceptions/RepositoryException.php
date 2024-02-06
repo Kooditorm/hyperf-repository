@@ -1,11 +1,10 @@
 <?php
 declare(strict_types=1);
 
+namespace Kooditorm\Repository\Exceptions;
 
-/**
- * @Class RepositoryException
- * @package Koodilab\Exceptions
- */
+use Exception;
+
 class RepositoryException extends Exception
 {
 
