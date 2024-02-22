@@ -5,11 +5,13 @@ namespace Kooditorm\Repository\Eloquent;
 
 use Closure;
 use Hyperf\Collection\Collection;
+use Hyperf\Contract\LengthAwarePaginatorInterface;
 use Hyperf\Database\Model\Builder;
 use Hyperf\DbConnection\Model\Model;
 use Hyperf\Di\Container;
 use Hyperf\Di\Exception\NotFoundException;
 use Kooditorm\Repository\Contracts\CriteriaInterface;
+use Kooditorm\Repository\Contracts\Presentable;
 use Kooditorm\Repository\Contracts\PresenterInterface;
 use Kooditorm\Repository\Contracts\RepositoryCriteriaInterface;
 use Kooditorm\Repository\Contracts\RepositoryInterface;
@@ -25,9 +27,9 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     protected array $fieldSearchable = [];
 
     /**
-     * @var PresenterInterface
+     * @var PresenterInterface|null
      */
-    protected PresenterInterface $presenter;
+    protected PresenterInterface|null $presenter;
 
     /**
      * Collection of Criteria
@@ -106,7 +108,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      *
      * @return $this
      * @throws NotFoundException
-     * @throws RepositoryException
      */
     public function setPresenter($presenter): self
     {
@@ -194,7 +195,7 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      * Retrieve data array for populate field select
      *
      * @param  string  $column
-     * @param string|null $key
+     * @param  string|null  $key
      *
      * @return Collection|array
      */
@@ -272,12 +273,13 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     protected function applyScope(): self
     {
         if (isset($this->scopeQuery) && is_callable($this->scopeQuery)) {
-            $callback = $this->scopeQuery;
+            $callback    = $this->scopeQuery;
             $this->model = $callback($this->model);
         }
 
         return $this;
     }
+
     /**
      * Apply criteria in current Query
      *
@@ -300,6 +302,34 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
         }
 
         return $this;
+    }
+
+    /**
+     * @param $result
+     * @return BaseRepository|null
+     * @throws NotFoundException
+     */
+    public function parserResult($result): null|static
+    {
+        if ($this->presenter instanceof PresenterInterface) {
+            if ($result instanceof Collection || $result instanceof LengthAwarePaginatorInterface) {
+                $result->each(function ($model) {
+                    if ($model instanceof Presentable) {
+                        $model->setPresenter($this->presenter);
+                    }
+
+                    return $model;
+                });
+            } elseif ($result instanceof Presentable) {
+                $result = $this->setPresenter($this->presenter);
+            }
+
+            if (!$this->skipPresenter) {
+                return $this->presenter->present($result);
+            }
+        }
+
+        return $result;
     }
 
 }
