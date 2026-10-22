@@ -12,12 +12,17 @@ declare(strict_types=1);
 
 namespace Kooditorm\Repository;
 
+use Kooditorm\Repository\Cache\CacheRepository;
+use Kooditorm\Repository\Contracts\CacheInterface;
+
 class ConfigProvider
 {
     public function __invoke(): array
     {
         return [
-            'dependencies' => [],
+            'dependencies' => [
+                CacheInterface::class => CacheRepository::class
+            ],
             'commands' => [],
             'annotations' => [
                 'scan' => [
