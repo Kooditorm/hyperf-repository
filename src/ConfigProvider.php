@@ -34,7 +34,14 @@ class ConfigProvider
                     ],
                 ],
             ],
-            'publish' => [],
+            'publish' => [
+                [
+                    'id' => 'config',
+                    'description' => 'The config for repository.',
+                    'source' => __DIR__ . '/../publish/repository.php',
+                    'destination' => BASE_PATH . '/config/autoload/repository.php',
+                ],
+            ],
         ];
     }
 }

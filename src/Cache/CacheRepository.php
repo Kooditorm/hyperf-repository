@@ -11,7 +11,6 @@ declare(strict_types=1);
  */
 
 namespace Kooditorm\Repository\Cache;
-;
 
 use Closure;
 use DateInterval;

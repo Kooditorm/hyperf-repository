@@ -12,22 +12,26 @@ declare(strict_types=1);
 
 namespace Kooditorm\Repository\Contracts;
 
-use Hyperf\Collection\Collection;
+use Closure;
 
 interface RepositoryInterface
 {
     /**
-     * @param string $column
-     * @param string|null $key
-     * @return Collection|array
-     */
-    public function lists(string $column, string|null $key = null): Collection|array;
-
-    /**
+     * Retrieve all data of repository
+     *
      * @param array $columns
      * @return mixed
      */
     public function all(array $columns = ['*']): mixed;
+
+    /**
+     * Count results of repository
+     *
+     * @param array $where
+     * @param string $columns
+     * @return int
+     */
+    public function count(array $where = [], string $columns = '*'): int;
 
     /**
      * Retrieve all data of repository, paginated
@@ -68,8 +72,27 @@ interface RepositoryInterface
     public function update(array $attributes, int|string $id): mixed;
 
     /**
+     * Delete a entity in repository by id
+     *
      * @param int|string $id
      * @return int
      */
     public function delete(int|string $id): int;
+
+    /**
+     * Query Scope
+     *
+     * @param Closure $scope
+     *
+     * @return $this
+     */
+    public function scopeQuery(Closure $scope): self;
+
+
+    /**
+     * Reset Query Scope
+     *
+     * @return $this
+     */
+    public function resetScope(): self;
 }
