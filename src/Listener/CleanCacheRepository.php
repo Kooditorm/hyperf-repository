@@ -15,7 +15,6 @@ namespace Kooditorm\Repository\Listener;
 use Hyperf\Event\Annotation\Listener;
 use Hyperf\Event\Contract\ListenerInterface;
 use Kooditorm\Repository\Event\RepositoryEntityCreated;
-use Kooditorm\Repository\Event\RepositoryEntityCreating;
 use Kooditorm\Repository\Event\RepositoryEntityDeleted;
 use Kooditorm\Repository\Event\RepositoryEntityUpdated;
 
