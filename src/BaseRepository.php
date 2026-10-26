@@ -18,9 +18,17 @@ use Hyperf\Contract\PaginatorInterface;
 use Hyperf\Database\Model\Builder;
 use Hyperf\Database\Model\Collection;
 use Hyperf\Database\Model\Model;
-use Hyperf\Di\Annotation\Inject;
 use Kooditorm\Repository\Contracts\RepositoryInterface;
+use Kooditorm\Repository\Event\RepositoryEntityCreated;
+use Kooditorm\Repository\Event\RepositoryEntityCreating;
+use Kooditorm\Repository\Event\RepositoryEntityDeleting;
+use Kooditorm\Repository\Event\RepositoryEntityUpdated;
+use Kooditorm\Repository\Event\RepositoryEntityUpdating;
+use Kooditorm\Repository\Exceptions\RepositoryException;
 use Kooditorm\Repository\Traits\CacheableRepository;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
+use Throwable;
 use function Hyperf\Config\config;
 
 abstract class BaseRepository implements RepositoryInterface
@@ -30,18 +38,71 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * @var ContainerInterface
      */
-    #[Inject]
     protected ContainerInterface $app;
+
+    /**
+     * @var Model|Builder
+     */
+    protected Model|Builder $model;
 
     /**
      * @var Closure|null
      */
     protected Closure|null $scopeQuery = null;
 
-
-    public function __construct(protected Model|Builder $model)
+    /**
+     * @param ContainerInterface $app
+     * @throws ContainerExceptionInterface&Throwable
+     * @throws RepositoryException
+     * @throws Throwable&NotFoundExceptionInterface
+     */
+    public function __construct(ContainerInterface $app)
     {
+        $this->app = $app;
+        $this->makeModel();
+    }
 
+    /**
+     * @return Builder|Model
+     */
+    public function getModel(): Model|Builder
+    {
+        return $this->model;
+    }
+
+    /**
+     * @return Model
+     * @throws RepositoryException
+     */
+    public function resetModel(): Model
+    {
+        $this->makeModel();
+    }
+
+    /**
+     * Specify Model class name
+     *
+     * @return string
+     */
+    abstract public function model(): string;
+
+    /**
+     * @return Model
+     * @throws RepositoryException
+     */
+    public function makeModel(): Model
+    {
+        try {
+            $model = $this->app->make($this->model());
+        } catch (Throwable $e) {
+            throw new RepositoryException($e->getMessage());
+        }
+
+        if (!$model instanceof Model) {
+            throw new RepositoryException('The model class must be an instance of Hyperf\Database\Model\Model');
+        }
+
+        return $model;
     }
 
     /**
@@ -61,11 +122,18 @@ abstract class BaseRepository implements RepositoryInterface
      *
      * @param array $columns
      * @return array
+     * @throws RepositoryException
      */
     public function all(array $columns = ['*']): array
     {
         $this->applyScope();
-        $results = $this->query()->get($columns)->toArray();
+        if ($this->model instanceof Builder) {
+            $results = $this->model->get($columns);
+        } else {
+            $results = $this->model::all($columns);
+        }
+
+        $this->resetModel();
         $this->resetScope();
         return $results;
     }
@@ -76,19 +144,31 @@ abstract class BaseRepository implements RepositoryInterface
      * @param array $where
      * @param string $columns
      * @return int
+     * @throws RepositoryException
      */
     public function count(array $where = [], string $columns = '*'): int
     {
         $this->applyScope();
 
         if (!empty($where)) {
-            $this->query()->where($where);
+            $this->model->where($where);
         }
 
-        $result = $this->query()->count($columns);
+        $result = $this->model->count($columns);
 
+        $this->resetModel();
         $this->resetScope();
         return $result;
+    }
+
+    /**
+     * @param array $columns
+     * @return array
+     * @throws RepositoryException
+     */
+    public function get(array $columns = ['*']): array
+    {
+        return $this->all($columns);
     }
 
     /**
@@ -98,16 +178,17 @@ abstract class BaseRepository implements RepositoryInterface
      * @param array $columns
      * @param string $method
      * @return array
+     * @throws RepositoryException
      */
     public function paginate(int|null $limit = null, array $columns = ['*'], string $method = 'paginate'): array
     {
         $this->applyScope();
         $limit = is_null($limit) ? config('repository.pagination.limit', 15) : $limit;
-        $results = $this->query()->{$method}($limit, $columns);
+        $results = $this->model->{$method}($limit, $columns);
         if ($results instanceof Collection || $results instanceof PaginatorInterface) {
             $results = $results->toArray();
         }
-        $this->resetScope();
+        $this->resetModel();
         return $results;
     }
 
@@ -117,32 +198,66 @@ abstract class BaseRepository implements RepositoryInterface
      * @param int|string $id
      * @param array $columns
      * @return array
+     * @throws RepositoryException
      */
     public function find(int|string $id, array $columns = ['*']): array
     {
         $this->applyScope();
-        $result = [];
-        $model = $this->query()->findOrFail($id, $columns);
-        if (!empty($model) && $model instanceof Collection) {
-            $result = $model->toArray();
-        }
-        $this->resetScope();
-        return $result;
+        $model = $this->model->findOrFail($id, $columns);
+        $this->resetModel();
+        return $model;
     }
 
+    /**
+     * Save a new entity in repository
+     *
+     * @param array $attributes
+     * @return mixed
+     * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
+     */
     public function create(array $attributes): mixed
     {
-        // TODO: Implement create() method.
+        event(new RepositoryEntityCreating($this, $attributes));
+        $model = $this->model->newInstance($attributes);
+        $model->save();
+        event(new RepositoryEntityCreated($this, $model));
+        $this->resetModel();
+        return $model;
     }
 
+    /**
+     * @param array $attributes
+     * @param int|string $id
+     * @return mixed
+     * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
+     */
     public function update(array $attributes, int|string $id): mixed
     {
-
+        $this->applyScope();
+        $model = $this->query()->findOrFail($id);
+        event(new RepositoryEntityUpdating($this, $model));
+        $model->fill($attributes);
+        $model->save();
+        $this->resetModel();
+        event(new RepositoryEntityUpdated($this, $model));
+        return $model;
     }
 
+    /**
+     * @param int|string $id
+     * @return int
+     * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
+     */
     public function delete(int|string $id): int
     {
-
+        $this->applyScope();
+        $model = $this->find($id);
+        $originalModel = clone $model;
+        $this->resetModel();
+        event(new RepositoryEntityDeleting($this, $model));
+        $deleted = $model->delete();
+        event(new RepositoryEntityUpdated($this, $originalModel));
+        return $deleted;
     }
 
     /**
@@ -166,19 +281,10 @@ abstract class BaseRepository implements RepositoryInterface
     {
         if (isset($this->scopeQuery) && is_callable($this->scopeQuery)) {
             $callback = $this->scopeQuery;
-            $this->model = $callback($this->query());
+            $this->model = $callback($this->model);
         }
 
         return $this;
-    }
-
-
-    /**
-     * @return Model|Builder
-     */
-    private function query(): Model|Builder
-    {
-        return $this->model instanceof Builder ? clone $this->model : $this->model->newQuery();
     }
 
 }
