@@ -47,8 +47,8 @@ interface CacheInterface
      *
      * @param string $key
      * @param DateTimeInterface|DateInterval|Closure|int|null $ttl
-     * @param Closure():TCacheValue $callback
-     * @return Closure():TCacheValue
+     * @param (Closure():TCacheValue) $callback
+     * @return TCacheValue
      */
-    public function remember(string $key, DateTimeInterface|DateInterval|Closure|int|null $ttl, Closure $callback): Closure;
+    public function remember(string $key, DateTimeInterface|DateInterval|Closure|int|null $ttl, Closure $callback): mixed;
 }

@@ -104,11 +104,11 @@ class CacheRepository implements CacheInterface
      *
      * @param string $key
      * @param DateTimeInterface|DateInterval|Closure|int|null $ttl
-     * @param Closure():TCacheValue $callback
-     * @return Closure():TCacheValue
+     * @param (Closure():TCacheValue) $callback
+     * @return TCacheValue
      * @throws InvalidArgumentException
      */
-    public function remember(string $key, DateTimeInterface|DateInterval|Closure|int|null $ttl, Closure $callback): Closure
+    public function remember(string $key, DateTimeInterface|DateInterval|Closure|int|null $ttl, Closure $callback): mixed
     {
         $value = $this->get($key);
 
@@ -120,7 +120,7 @@ class CacheRepository implements CacheInterface
 
         $this->store->getDriver()->set($key, $value, $this->value($ttl));
 
-        return $callback;
+        return $value;
     }
 
     /**

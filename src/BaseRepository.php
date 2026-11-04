@@ -41,9 +41,9 @@ abstract class BaseRepository implements RepositoryInterface
     protected ContainerInterface $app;
 
     /**
-     * @var Model|Builder
+     * @var Model
      */
-    protected Model|Builder $model;
+    protected Model $model;
 
     /**
      * @var Closure|null
@@ -52,9 +52,7 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * @param ContainerInterface $app
-     * @throws ContainerExceptionInterface&Throwable
      * @throws RepositoryException
-     * @throws Throwable&NotFoundExceptionInterface
      */
     public function __construct(ContainerInterface $app)
     {
@@ -63,18 +61,17 @@ abstract class BaseRepository implements RepositoryInterface
     }
 
     /**
-     * @return Builder|Model
+     * @return Model
      */
-    public function getModel(): Model|Builder
+    public function getModel(): Model
     {
         return $this->model;
     }
 
     /**
-     * @return Model
      * @throws RepositoryException
      */
-    public function resetModel(): Model
+    public function resetModel(): void
     {
         $this->makeModel();
     }
@@ -102,7 +99,7 @@ abstract class BaseRepository implements RepositoryInterface
             throw new RepositoryException('The model class must be an instance of Hyperf\Database\Model\Model');
         }
 
-        return $model;
+        return $this->model = $model;
     }
 
     /**
@@ -127,11 +124,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function all(array $columns = ['*']): array
     {
         $this->applyScope();
-        if ($this->model instanceof Builder) {
-            $results = $this->model->get($columns);
-        } else {
-            $results = $this->model::all($columns);
-        }
+        $results = $this->model::all($columns)->toArray();
 
         $this->resetModel();
         $this->resetScope();
@@ -151,10 +144,10 @@ abstract class BaseRepository implements RepositoryInterface
         $this->applyScope();
 
         if (!empty($where)) {
-            $this->model->where($where);
+            $this->model::where($where);
         }
 
-        $result = $this->model->count($columns);
+        $result = $this->model::count($columns);
 
         $this->resetModel();
         $this->resetScope();
@@ -184,7 +177,8 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $this->applyScope();
         $limit = is_null($limit) ? config('repository.pagination.limit', 15) : $limit;
-        $results = $this->model->{$method}($limit, $columns);
+        $results = $this->model::{$method}($limit, $columns);
+        $sql = $this->model::getQuery()->toSql();
         if ($results instanceof Collection || $results instanceof PaginatorInterface) {
             $results = $results->toArray();
         }
@@ -203,7 +197,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function find(int|string $id, array $columns = ['*']): array
     {
         $this->applyScope();
-        $model = $this->model->findOrFail($id, $columns);
+        $model = $this->query()->findOrFail($id, $columns)->toArray();
         $this->resetModel();
         return $model;
     }
@@ -212,10 +206,10 @@ abstract class BaseRepository implements RepositoryInterface
      * Save a new entity in repository
      *
      * @param array $attributes
-     * @return mixed
+     * @return Model|Collection|array
      * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
      */
-    public function create(array $attributes): mixed
+    public function create(array $attributes): Model|Collection|array
     {
         event(new RepositoryEntityCreating($this, $attributes));
         $model = $this->model->newInstance($attributes);
@@ -228,13 +222,13 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * @param array $attributes
      * @param int|string $id
-     * @return mixed
+     * @return Model|Collection|array
      * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
      */
-    public function update(array $attributes, int|string $id): mixed
+    public function update(array $attributes, int|string $id): Model|Collection|array
     {
         $this->applyScope();
-        $model = $this->query()->findOrFail($id);
+        $model = $this->model::findOrFail($id);
         event(new RepositoryEntityUpdating($this, $model));
         $model->fill($attributes);
         $model->save();
@@ -285,6 +279,14 @@ abstract class BaseRepository implements RepositoryInterface
         }
 
         return $this;
+    }
+
+    /**
+     * @return Builder
+     */
+    private function query(): Builder
+    {
+        return $this->model::query();
     }
 
 }
