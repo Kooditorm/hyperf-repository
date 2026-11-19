@@ -12,10 +12,12 @@ declare(strict_types=1);
 
 namespace Kooditorm\Repository\Cache;
 
+use App\Common\physical\GatherSqlTable;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
 use Hyperf\Cache\CacheManager;
+use Hyperf\DbConnection\Db;
 use Kooditorm\Repository\Contracts\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 
@@ -60,7 +62,7 @@ class CacheRepository implements CacheInterface
         $value = $this->store->getDriver()->get($key);
 
         if (is_null($value)) {
-            $value = $this->value($value);
+            $value = value($default);
         }
 
         return $value;
@@ -116,22 +118,18 @@ class CacheRepository implements CacheInterface
             return $value;
         }
 
+        $connection = Db::connection();
+        $connection->enableQueryLog();
         $value = $callback();
-
-        $this->store->getDriver()->set($key, $value, $this->value($ttl));
+        $lastQuery = $connection->getQueryLog();
+        $lastQuery = end($lastQuery);
+        $lastSql = $lastQuery['query'] ?? '';
+        $table = new GatherSqlTable();
+        $tbs = $table->getTables($lastSql, ['with_schema' => false]);
+        $connection->disableQueryLog();
+        $this->store->getDriver()->set($key, $value, value($ttl));
 
         return $value;
     }
 
-    /**
-     * Return the default value of the given value.
-     *
-     * @param $value
-     * @param ...$args
-     * @return mixed
-     */
-    private function value($value, ...$args): mixed
-    {
-        return $value instanceof Closure ? $value(...$args) : $value;
-    }
 }

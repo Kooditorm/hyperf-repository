@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Kooditorm\Repository;
 
 use Closure;
+use Exception;
 use Hyperf\Contract\ContainerInterface;
 use Hyperf\Contract\PaginatorInterface;
 use Hyperf\Database\Model\Builder;
@@ -21,6 +22,7 @@ use Hyperf\Database\Model\Model;
 use Kooditorm\Repository\Contracts\RepositoryInterface;
 use Kooditorm\Repository\Event\RepositoryEntityCreated;
 use Kooditorm\Repository\Event\RepositoryEntityCreating;
+use Kooditorm\Repository\Event\RepositoryEntityDeleted;
 use Kooditorm\Repository\Event\RepositoryEntityDeleting;
 use Kooditorm\Repository\Event\RepositoryEntityUpdated;
 use Kooditorm\Repository\Event\RepositoryEntityUpdating;
@@ -124,10 +126,13 @@ abstract class BaseRepository implements RepositoryInterface
     public function all(array $columns = ['*']): array
     {
         $this->applyScope();
-        $results = $this->model::all($columns)->toArray();
+        try {
+            $results = $this->query()->get($columns)->toArray();
+        } finally {
+            $this->resetModel();
+            $this->resetScope();
+        }
 
-        $this->resetModel();
-        $this->resetScope();
         return $results;
     }
 
@@ -144,10 +149,10 @@ abstract class BaseRepository implements RepositoryInterface
         $this->applyScope();
 
         if (!empty($where)) {
-            $this->model::where($where);
+            $this->query()->where($where);
         }
 
-        $result = $this->model::count($columns);
+        $result = $this->query()->count($columns);
 
         $this->resetModel();
         $this->resetScope();
@@ -177,12 +182,14 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $this->applyScope();
         $limit = is_null($limit) ? config('repository.pagination.limit', 15) : $limit;
-        $results = $this->model::{$method}($limit, $columns);
-        $sql = $this->model::getQuery()->toSql();
-        if ($results instanceof Collection || $results instanceof PaginatorInterface) {
-            $results = $results->toArray();
+        try {
+            $results =  $this->query()->{$method}($limit, $columns);
+            if ($results instanceof Collection || $results instanceof PaginatorInterface) {
+                $results = $results->toArray();
+            }
+        } finally {
+            $this->resetModel();
         }
-        $this->resetModel();
         return $results;
     }
 
@@ -197,8 +204,35 @@ abstract class BaseRepository implements RepositoryInterface
     public function find(int|string $id, array $columns = ['*']): array
     {
         $this->applyScope();
-        $model = $this->query()->findOrFail($id, $columns)->toArray();
-        $this->resetModel();
+        try {
+            $model = $this->query()->findOrFail($id, $columns)->toArray();
+        }finally {
+            $this->resetModel();
+        }
+
+
+        return $model;
+    }
+
+
+    /**
+     * Find data by multiple fields
+     *
+     * @param  array  $where
+     * @param  array  $columns
+     *
+     * @return array
+     * @throws RepositoryException
+     */
+    public function findWhere(array $where, array $columns = ['*']): array
+    {
+        $this->applyScope();
+        try {
+            $model = $this->query()->where($where)->get($columns)->toArray();
+        } finally {
+            $this->resetModel();
+        }
+
         return $model;
     }
 
@@ -228,7 +262,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function update(array $attributes, int|string $id): Model|Collection|array
     {
         $this->applyScope();
-        $model = $this->model::findOrFail($id);
+        $model = $this->query()->findOrFail($id);
         event(new RepositoryEntityUpdating($this, $model));
         $model->fill($attributes);
         $model->save();
@@ -238,19 +272,25 @@ abstract class BaseRepository implements RepositoryInterface
     }
 
     /**
-     * @param int|string $id
-     * @return int
-     * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
+     * @param  int|string  $id
+     * @return bool
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws RepositoryException
      */
-    public function delete(int|string $id): int
+    public function delete(int|string $id): bool
     {
         $this->applyScope();
-        $model = $this->find($id);
+        $model = $this->query()->findOrFail($id);
         $originalModel = clone $model;
         $this->resetModel();
         event(new RepositoryEntityDeleting($this, $model));
-        $deleted = $model->delete();
-        event(new RepositoryEntityUpdated($this, $originalModel));
+        try {
+            $deleted = $model->delete();
+        } catch (Exception $e) {
+            return false;
+        }
+        event(new RepositoryEntityDeleted($this, $originalModel));
         return $deleted;
     }
 
@@ -286,7 +326,7 @@ abstract class BaseRepository implements RepositoryInterface
      */
     private function query(): Builder
     {
-        return $this->model::query();
+        return $this->model->newQuery();
     }
 
 }

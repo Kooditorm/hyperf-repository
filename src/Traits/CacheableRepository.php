@@ -12,7 +12,6 @@ declare(strict_types=1);
 
 namespace Kooditorm\Repository\Traits;
 
-use Closure;
 use Hyperf\HttpServer\Contract\RequestInterface;
 use Kooditorm\Repository\BaseRepository;
 use Kooditorm\Repository\Contracts\CacheInterface;
@@ -35,7 +34,7 @@ trait CacheableRepository
     /**
      * Set Cache Repository
      *
-     * @param CacheInterface $cacheRepository
+     * @param  CacheInterface  $cacheRepository
      * @return BaseRepository
      */
     public function setCacheRepository(CacheInterface $cacheRepository): BaseRepository
@@ -59,7 +58,7 @@ trait CacheableRepository
     /**
      * Skip Cache
      *
-     * @param bool $status
+     * @param  bool  $status
      * @return BaseRepository
      */
     public function skipCache(bool $status = true): BaseRepository
@@ -80,7 +79,7 @@ trait CacheableRepository
             return false;
         }
 
-        $cacheOnly = $this->cacheOnly ?? config('repository.cache.allowed.only', null);
+        $cacheOnly   = $this->cacheOnly ?? config('repository.cache.allowed.only', null);
         $cacheExcept = $this->cacheExcept ?? config('repository.cache.allowed.except', null);
 
         if (is_array($cacheOnly)) {
@@ -101,18 +100,16 @@ trait CacheableRepository
     /**
      * Get Cache key for the method
      *
-     * @param mixed $method
-     * @param mixed|null $args
+     * @param  mixed  $method
+     * @param  mixed|null  $args
      * @return string
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public
-    function getCacheKey(mixed $method, mixed $args = null): string
-    {
+    public function getCacheKey(mixed $method, mixed $args = null): string {
         $args = serialize($args);
-        $req = $this->app->get(RequestInterface::class);
-        $md5 = md5($args . $req->fullUrl());
+        $req  = $this->app->get(RequestInterface::class);
+        $md5  = md5($args.$req->fullUrl());
         return sprintf('%s@%s-%s', static::class, $method, $md5);
     }
 
@@ -121,8 +118,7 @@ trait CacheableRepository
      *
      * @return int
      */
-    public
-    function getCacheTime(): int
+    public function getCacheTime(): int
     {
         return $this->cacheMinutes ?? config('repository.cache.minutes', 30) * 60;
     }
@@ -130,7 +126,7 @@ trait CacheableRepository
     /**
      * Retrieve all data of repository
      *
-     * @param array $columns
+     * @param  array  $columns
      * @return array
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface|RepositoryException
@@ -141,8 +137,8 @@ trait CacheableRepository
             return parent::all($columns);
         }
 
-        $key = $this->getCacheKey('all', func_get_args());
-        $time = $this->getCacheTime();
+        $key   = $this->getCacheKey('all', func_get_args());
+        $time  = $this->getCacheTime();
         $value = $this->getCacheRepository()->remember($key, $time, function () use ($columns) {
             return parent::all($columns);
         });
@@ -154,9 +150,9 @@ trait CacheableRepository
     }
 
     /**
-     * @param int|null $limit
-     * @param array $columns
-     * @param string $method
+     * @param  int|null  $limit
+     * @param  array  $columns
+     * @param  string  $method
      * @return array
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface|RepositoryException
@@ -167,8 +163,8 @@ trait CacheableRepository
             return parent::paginate($limit, $columns, $method);
         }
 
-        $key = $this->getCacheKey('paginate', func_get_args());
-        $time = $this->getCacheTime();
+        $key   = $this->getCacheKey('paginate', func_get_args());
+        $time  = $this->getCacheTime();
         $value = $this->getCacheRepository()->remember($key, $time, function () use ($limit, $columns, $method) {
             return parent::paginate($limit, $columns, $method);
         });

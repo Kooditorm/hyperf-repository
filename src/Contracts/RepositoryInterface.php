@@ -19,7 +19,7 @@ interface RepositoryInterface
     /**
      * Retrieve all data of repository
      *
-     * @param array $columns
+     * @param  array  $columns
      * @return mixed
      */
     public function all(array $columns = ['*']): mixed;
@@ -27,8 +27,8 @@ interface RepositoryInterface
     /**
      * Count results of repository
      *
-     * @param array $where
-     * @param string $columns
+     * @param  array  $where
+     * @param  string  $columns
      * @return int
      */
     public function count(array $where = [], string $columns = '*'): int;
@@ -36,9 +36,9 @@ interface RepositoryInterface
     /**
      * Retrieve all data of repository, paginated
      *
-     * @param int|null $limit
-     * @param array $columns
-     * @param string $method 实际调用的模型分页方法（paginate / simplePaginate ...）
+     * @param  int|null  $limit
+     * @param  array  $columns
+     * @param  string  $method  实际调用的模型分页方法（paginate / simplePaginate ...）
      * @return mixed
      */
     public function paginate(int|null $limit = null, array $columns = ['*'], string $method = 'paginate'): mixed;
@@ -46,16 +46,27 @@ interface RepositoryInterface
     /**
      * Find data by id
      *
-     * @param int|string $id
-     * @param array $columns
+     * @param  int|string  $id
+     * @param  array  $columns
      * @return mixed
      */
     public function find(int|string $id, array $columns = ['*']): mixed;
 
+
+    /**
+     * Find data by multiple fields
+     *
+     * @param  array  $where
+     * @param  array  $columns
+     *
+     * @return mixed
+     */
+    public function findWhere(array $where, array $columns = ['*']): mixed;
+
     /**
      * Save a new entity in repository
      *
-     * @param array $attributes
+     * @param  array  $attributes
      * @return mixed
      */
     public function create(array $attributes): mixed;
@@ -64,8 +75,8 @@ interface RepositoryInterface
     /**
      * Update a entity in repository by id
      *
-     * @param array $attributes
-     * @param int|string $id
+     * @param  array  $attributes
+     * @param  int|string  $id
      *
      * @return mixed
      */
@@ -74,15 +85,15 @@ interface RepositoryInterface
     /**
      * Delete a entity in repository by id
      *
-     * @param int|string $id
-     * @return int
+     * @param  int|string  $id
+     * @return bool
      */
-    public function delete(int|string $id): int;
+    public function delete(int|string $id): bool;
 
     /**
      * Query Scope
      *
-     * @param Closure $scope
+     * @param  Closure  $scope
      *
      * @return $this
      */
