@@ -12,13 +12,14 @@ declare(strict_types=1);
 
 namespace Kooditorm\Repository\Cache;
 
-use App\Common\physical\GatherSqlTable;
+
 use Closure;
 use DateInterval;
 use DateTimeInterface;
 use Hyperf\Cache\CacheManager;
 use Hyperf\DbConnection\Db;
 use Kooditorm\Repository\Contracts\CacheInterface;
+use Kooditorm\Repository\Physical\GatherSqlTable;
 use Psr\SimpleCache\InvalidArgumentException;
 
 class CacheRepository implements CacheInterface
