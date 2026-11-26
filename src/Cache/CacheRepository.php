@@ -125,8 +125,8 @@ class CacheRepository implements CacheInterface
         $lastQuery = $connection->getQueryLog();
         $lastQuery = end($lastQuery);
         $lastSql = $lastQuery['query'] ?? '';
-        $table = new GatherSqlTable();
-        $tbs = $table->getTables($lastSql, ['with_schema' => false]);
+//        $table = new GatherSqlTable();
+//        $tbs = $table->getTables($lastSql, ['with_schema' => false]);
         $connection->disableQueryLog();
         $this->store->getDriver()->set($key, $value, value($ttl));
 
