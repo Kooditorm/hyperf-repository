@@ -13,7 +13,7 @@ namespace Kooditorm\Repository\Event;
 
 class RepositoryCacheRemember
 {
-    public function __construct(public string $key, public string $sql)
+    public function __construct(public string $key, public string $sql, public int $expireAt = 0)
     {
 
     }

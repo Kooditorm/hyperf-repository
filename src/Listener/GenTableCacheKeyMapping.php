@@ -18,6 +18,9 @@ use Kooditorm\Repository\Physical\GatherSqlTable;
 
 class GenTableCacheKeyMapping implements ListenerInterface
 {
+    /** 表 → 缓存 key 映射的命名空间前缀，避免与业务缓存 key 冲突 */
+    private const MAPPING_PREFIX = 'repo:tk:';
+
     public function __construct(protected CacheInterface $cache)
     {
 
@@ -38,6 +41,13 @@ class GenTableCacheKeyMapping implements ListenerInterface
         $table = new GatherSqlTable();
         $tbs = $table->getTables($tableSql, ['with_schema' => false]);
 
-        var_dump($this->cache);
+        $store = $this->cache->getStore();
+        $redis = $store->getConnection();
+        if (!empty($tbs)) {
+            foreach ($tbs as $tb) {
+                // field = 缓存 key，value = 过期时间戳（0 表示永久缓存）
+                $redis->hset(self::MAPPING_PREFIX.$tb, $cacheKey, (string) $event->expireAt);
+            }
+        }
     }
 }

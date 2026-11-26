@@ -17,6 +17,7 @@ use Closure;
 use DateInterval;
 use DateTimeInterface;
 use Hyperf\Cache\CacheManager;
+use Hyperf\Cache\Driver\DriverInterface;
 use Hyperf\DbConnection\Db;
 use Kooditorm\Repository\Contracts\CacheInterface;
 use Kooditorm\Repository\Event\RepositoryCacheRemember;
@@ -31,7 +32,7 @@ class CacheRepository implements CacheInterface
     /**
      * Create a new cache repository instance.
      *
-     * @param CacheManager $store
+     * @param  CacheManager  $store
      */
     public function __construct(protected CacheManager $store)
     {
@@ -53,8 +54,8 @@ class CacheRepository implements CacheInterface
      *
      * @template TCacheValue
      *
-     * @param string|array $key
-     * @param (Closure():TCacheValue)|null $default
+     * @param  string|array  $key
+     * @param  (Closure():TCacheValue)|null  $default
      * @return (TCacheValue is null ? mixed : TCacheValue)
      * @throws InvalidArgumentException
      */
@@ -76,9 +77,9 @@ class CacheRepository implements CacheInterface
     /**
      * Store an item in the cache.
      *
-     * @param string $key
-     * @param mixed $value
-     * @param DateInterval|DateTimeInterface|int|null $ttl
+     * @param  string  $key
+     * @param  mixed  $value
+     * @param  DateInterval|DateTimeInterface|int|null  $ttl
      * @return bool
      * @throws InvalidArgumentException
      */
@@ -94,8 +95,8 @@ class CacheRepository implements CacheInterface
     /**
      * Store an item in the cache indefinitely.
      *
-     * @param string $key
-     * @param mixed $value
+     * @param  string  $key
+     * @param  mixed  $value
      * @return bool
      * @throws InvalidArgumentException
      */
@@ -127,15 +128,37 @@ class CacheRepository implements CacheInterface
 
         $connection = Db::connection();
         $connection->enableQueryLog();
-        $value = $callback();
+        $value     = $callback();
         $lastQuery = $connection->getQueryLog();
         $lastQuery = end($lastQuery);
-        $lastSql = $lastQuery['query'] ?? '';
-        event(new RepositoryCacheRemember($key, $lastSql));
+        $lastSql   = is_array($lastQuery) ? ($lastQuery['query'] ?? '') : '';
         $connection->disableQueryLog();
-//        $this->store->getDriver()->set($key, $value, value($ttl));
+
+        // 先写缓存，成功后再登记表 → 缓存 key 映射，避免留下孤儿映射
+        $this->store->getDriver()->set($key, $value, value($ttl));
+        event(new RepositoryCacheRemember($key, $lastSql, $this->expireAt($ttl)));
 
         return $value;
+    }
+
+    /**
+     * 归一化 TTL 为过期时间戳；null / Closure（永久缓存）返回 0
+     */
+    private function expireAt(DateTimeInterface|DateInterval|Closure|int|null $ttl): int
+    {
+        $t = value($ttl);
+        return match (true) {
+            is_int($t) => time() + $t,
+            $t instanceof DateTimeInterface => $t->getTimestamp(),
+            $t instanceof DateInterval => time() + ($t->days ? $t->days * 86400
+                : $t->d * 86400 + $t->h * 3600 + $t->i * 60 + $t->s),
+            default => 0,
+        };
+    }
+
+    public function getStore(): DriverInterface
+    {
+        return $this->store->getDriver();
     }
 
 }

@@ -16,6 +16,7 @@ namespace Kooditorm\Repository\Contracts;
 use Closure;
 use DateInterval;
 use DateTimeInterface;
+use Hyperf\Cache\Driver\DriverInterface;
 
 interface CacheInterface
 {
@@ -23,9 +24,9 @@ interface CacheInterface
     /**
      * Store an item in the cache.
      *
-     * @param string $key
-     * @param mixed $value
-     * @param DateInterval|DateTimeInterface|int|null $ttl
+     * @param  string  $key
+     * @param  mixed  $value
+     * @param  DateInterval|DateTimeInterface|int|null  $ttl
      * @return bool
      */
     public function put(string $key, mixed $value, DateInterval|DateTimeInterface|int $ttl = null): bool;
@@ -34,8 +35,8 @@ interface CacheInterface
     /**
      * Store an item in the cache indefinitely.
      *
-     * @param string $key
-     * @param mixed $value
+     * @param  string  $key
+     * @param  mixed  $value
      * @return bool
      */
     public function forever(string $key, mixed $value): bool;
@@ -45,10 +46,18 @@ interface CacheInterface
      *
      * @template TCacheValue
      *
-     * @param string $key
-     * @param DateTimeInterface|DateInterval|Closure|int|null $ttl
-     * @param (Closure():TCacheValue) $callback
+     * @param  string  $key
+     * @param  DateTimeInterface|DateInterval|Closure|int|null  $ttl
+     * @param  (Closure():TCacheValue)  $callback
      * @return TCacheValue
      */
     public function remember(string $key, DateTimeInterface|DateInterval|Closure|int|null $ttl, Closure $callback): mixed;
+
+
+    /**
+     * Get the cache store implementation.
+     *
+     * @return DriverInterface
+     */
+    public function getStore(): DriverInterface;
 }
