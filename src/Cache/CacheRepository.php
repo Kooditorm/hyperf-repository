@@ -23,6 +23,7 @@ use Kooditorm\Repository\Event\RepositoryCacheRemember;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\SimpleCache\InvalidArgumentException;
+use function Kooditorm\Repository\value;
 
 class CacheRepository implements CacheInterface
 {
