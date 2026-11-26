@@ -48,6 +48,11 @@ abstract class BaseRepository implements RepositoryInterface
     protected Model $model;
 
     /**
+     * @var Builder
+     */
+    protected Builder $query;
+
+    /**
      * @var Closure|null
      */
     protected Closure|null $scopeQuery = null;
@@ -71,12 +76,21 @@ abstract class BaseRepository implements RepositoryInterface
     }
 
     /**
+     * @return Builder
+     */
+    public function getQuery(): Builder
+    {
+        return $this->query;
+    }
+
+    /**
      * @throws RepositoryException
      */
     public function resetModel(): void
     {
         $this->makeModel();
     }
+
 
     /**
      * Specify Model class name
@@ -101,6 +115,7 @@ abstract class BaseRepository implements RepositoryInterface
             throw new RepositoryException('The model class must be an instance of Hyperf\Database\Model\Model');
         }
 
+        $this->query = $model->newQuery();
         return $this->model = $model;
     }
 
@@ -127,7 +142,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $this->applyScope();
         try {
-            $results = $this->query()->get($columns)->toArray();
+            $results = $this->query->get($columns)->toArray();
         } finally {
             $this->resetModel();
             $this->resetScope();
@@ -149,10 +164,10 @@ abstract class BaseRepository implements RepositoryInterface
         $this->applyScope();
 
         if (!empty($where)) {
-            $this->query()->where($where);
+            $this->query->where($where);
         }
 
-        $result = $this->query()->count($columns);
+        $result = $this->query->count($columns);
 
         $this->resetModel();
         $this->resetScope();
@@ -181,7 +196,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function first(array $columns = ['*']): array
     {
         $this->applyScope();
-        $results = $this->query()->first($columns)->toArray();
+        $results = $this->query->first($columns)->toArray();
         $this->resetModel();
         return $results;
     }
@@ -200,7 +215,7 @@ abstract class BaseRepository implements RepositoryInterface
         $this->applyScope();
         $limit = is_null($limit) ? config('repository.pagination.limit', 15) : $limit;
         try {
-            $results = $this->query()->{$method}($limit, $columns);
+            $results = $this->query->{$method}($limit, $columns);
             if ($results instanceof Collection || $results instanceof PaginatorInterface) {
                 $results = $results->toArray();
             }
@@ -222,7 +237,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $this->applyScope();
         try {
-            $model = $this->query()->findOrFail($id, $columns)->toArray();
+            $model = $this->query->findOrFail($id, $columns)->toArray();
         } finally {
             $this->resetModel();
         }
@@ -245,7 +260,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $this->applyScope();
         try {
-            $model = $this->query()->where($where)->get($columns)->toArray();
+            $model = $this->query->where($where)->get($columns)->toArray();
         } finally {
             $this->resetModel();
         }
@@ -279,7 +294,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function update(array $attributes, int|string $id): Model|Collection|array
     {
         $this->applyScope();
-        $model = $this->query()->findOrFail($id);
+        $model = $this->query->findOrFail($id);
         event(new RepositoryEntityUpdating($this, $model));
         $model->fill($attributes);
         $model->save();
@@ -298,7 +313,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function delete(int|string $id): bool
     {
         $this->applyScope();
-        $model         = $this->query()->findOrFail($id);
+        $model         = $this->query->findOrFail($id);
         $originalModel = clone $model;
         $this->resetModel();
         event(new RepositoryEntityDeleting($this, $model));
@@ -332,18 +347,11 @@ abstract class BaseRepository implements RepositoryInterface
     {
         if (isset($this->scopeQuery) && is_callable($this->scopeQuery)) {
             $callback    = $this->scopeQuery;
-            $this->model = $callback($this->model);
+            $this->query = $callback($this->query);
         }
 
         return $this;
     }
 
-    /**
-     * @return Builder
-     */
-    private function query(): Builder
-    {
-        return $this->model->newQuery();
-    }
 
 }
