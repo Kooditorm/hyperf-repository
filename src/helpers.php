@@ -9,7 +9,9 @@ declare(strict_types=1);
  * @contact  oswin.hu@gmail.com
  * @license  https://github.com/Kooditorm/hyperf-repositoryt/blob/master/LICENSE
  */
+namespace Kooditorm\Repository;
 
+use Closure;
 use Hyperf\Context\ApplicationContext;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
