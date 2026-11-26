@@ -19,7 +19,9 @@ use DateTimeInterface;
 use Hyperf\Cache\CacheManager;
 use Hyperf\DbConnection\Db;
 use Kooditorm\Repository\Contracts\CacheInterface;
-use Kooditorm\Repository\Physical\GatherSqlTable;
+use Kooditorm\Repository\Event\RepositoryCacheRemember;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 
 class CacheRepository implements CacheInterface
@@ -105,11 +107,13 @@ class CacheRepository implements CacheInterface
      *
      * @template TCacheValue
      *
-     * @param string $key
-     * @param DateTimeInterface|DateInterval|Closure|int|null $ttl
-     * @param (Closure():TCacheValue) $callback
+     * @param  string  $key
+     * @param  DateTimeInterface|DateInterval|Closure|int|null  $ttl
+     * @param  (Closure():TCacheValue)  $callback
      * @return TCacheValue
+     * @throws ContainerExceptionInterface
      * @throws InvalidArgumentException
+     * @throws NotFoundExceptionInterface
      */
     public function remember(string $key, DateTimeInterface|DateInterval|Closure|int|null $ttl, Closure $callback): mixed
     {
@@ -125,10 +129,9 @@ class CacheRepository implements CacheInterface
         $lastQuery = $connection->getQueryLog();
         $lastQuery = end($lastQuery);
         $lastSql = $lastQuery['query'] ?? '';
-//        $table = new GatherSqlTable();
-//        $tbs = $table->getTables($lastSql, ['with_schema' => false]);
+        event(new RepositoryCacheRemember($key, $lastSql));
         $connection->disableQueryLog();
-        $this->store->getDriver()->set($key, $value, value($ttl));
+//        $this->store->getDriver()->set($key, $value, value($ttl));
 
         return $value;
     }
