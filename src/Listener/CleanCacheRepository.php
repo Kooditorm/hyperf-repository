@@ -18,7 +18,6 @@ use Kooditorm\Repository\Event\RepositoryEntityCreated;
 use Kooditorm\Repository\Event\RepositoryEntityDeleted;
 use Kooditorm\Repository\Event\RepositoryEntityUpdated;
 
-#[Listener]
 class CleanCacheRepository implements ListenerInterface
 {
     public function listen():array
