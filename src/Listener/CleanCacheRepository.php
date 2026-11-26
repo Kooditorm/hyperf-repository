@@ -12,7 +12,6 @@ declare(strict_types=1);
 
 namespace Kooditorm\Repository\Listener;
 
-use Hyperf\Event\Annotation\Listener;
 use Hyperf\Event\Contract\ListenerInterface;
 use Kooditorm\Repository\Event\RepositoryEntityCreated;
 use Kooditorm\Repository\Event\RepositoryEntityDeleted;
