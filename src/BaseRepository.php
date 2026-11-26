@@ -53,7 +53,7 @@ abstract class BaseRepository implements RepositoryInterface
     protected Closure|null $scopeQuery = null;
 
     /**
-     * @param ContainerInterface $app
+     * @param  ContainerInterface  $app
      * @throws RepositoryException
      */
     public function __construct(ContainerInterface $app)
@@ -107,7 +107,7 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * Query Scope
      *
-     * @param Closure $scope
+     * @param  Closure  $scope
      * @return RepositoryInterface
      */
     public function scopeQuery(Closure $scope): RepositoryInterface
@@ -119,7 +119,7 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * Retrieve all data of repository
      *
-     * @param array $columns
+     * @param  array  $columns
      * @return array
      * @throws RepositoryException
      */
@@ -139,8 +139,8 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * Count results of repository
      *
-     * @param array $where
-     * @param string $columns
+     * @param  array  $where
+     * @param  string  $columns
      * @return int
      * @throws RepositoryException
      */
@@ -160,7 +160,9 @@ abstract class BaseRepository implements RepositoryInterface
     }
 
     /**
-     * @param array $columns
+     * Alias of All method
+     *
+     * @param  array  $columns
      * @return array
      * @throws RepositoryException
      */
@@ -170,11 +172,26 @@ abstract class BaseRepository implements RepositoryInterface
     }
 
     /**
+     * Retrieve first data of repository
+     *
+     * @param  array  $columns
+     * @return mixed
+     * @throws RepositoryException
+     */
+    public function first(array $columns = ['*']): array
+    {
+        $this->applyScope();
+        $results = $this->query()->first($columns)->toArray();
+        $this->resetModel();
+        return $results;
+    }
+
+    /**
      * etrieve all data of repository, paginated
      *
-     * @param int|null $limit
-     * @param array $columns
-     * @param string $method
+     * @param  int|null  $limit
+     * @param  array  $columns
+     * @param  string  $method
      * @return array
      * @throws RepositoryException
      */
@@ -183,7 +200,7 @@ abstract class BaseRepository implements RepositoryInterface
         $this->applyScope();
         $limit = is_null($limit) ? config('repository.pagination.limit', 15) : $limit;
         try {
-            $results =  $this->query()->{$method}($limit, $columns);
+            $results = $this->query()->{$method}($limit, $columns);
             if ($results instanceof Collection || $results instanceof PaginatorInterface) {
                 $results = $results->toArray();
             }
@@ -196,8 +213,8 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * Find data by id
      *
-     * @param int|string $id
-     * @param array $columns
+     * @param  int|string  $id
+     * @param  array  $columns
      * @return array
      * @throws RepositoryException
      */
@@ -206,7 +223,7 @@ abstract class BaseRepository implements RepositoryInterface
         $this->applyScope();
         try {
             $model = $this->query()->findOrFail($id, $columns)->toArray();
-        }finally {
+        } finally {
             $this->resetModel();
         }
 
@@ -239,7 +256,7 @@ abstract class BaseRepository implements RepositoryInterface
     /**
      * Save a new entity in repository
      *
-     * @param array $attributes
+     * @param  array  $attributes
      * @return Model|Collection|array
      * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
      */
@@ -254,8 +271,8 @@ abstract class BaseRepository implements RepositoryInterface
     }
 
     /**
-     * @param array $attributes
-     * @param int|string $id
+     * @param  array  $attributes
+     * @param  int|string  $id
      * @return Model|Collection|array
      * @throws ContainerExceptionInterface|NotFoundExceptionInterface|RepositoryException
      */
@@ -281,7 +298,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function delete(int|string $id): bool
     {
         $this->applyScope();
-        $model = $this->query()->findOrFail($id);
+        $model         = $this->query()->findOrFail($id);
         $originalModel = clone $model;
         $this->resetModel();
         event(new RepositoryEntityDeleting($this, $model));
@@ -314,7 +331,7 @@ abstract class BaseRepository implements RepositoryInterface
     protected function applyScope(): self
     {
         if (isset($this->scopeQuery) && is_callable($this->scopeQuery)) {
-            $callback = $this->scopeQuery;
+            $callback    = $this->scopeQuery;
             $this->model = $callback($this->model);
         }
 
