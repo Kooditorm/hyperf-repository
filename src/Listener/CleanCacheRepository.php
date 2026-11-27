@@ -13,19 +13,15 @@ declare(strict_types=1);
 namespace Kooditorm\Repository\Listener;
 
 use Hyperf\Event\Contract\ListenerInterface;
+use Kooditorm\Repository\Cache\TCKMapping;
 use Kooditorm\Repository\Contracts\CacheInterface;
 use Kooditorm\Repository\Event\RepositoryEntityCreated;
 use Kooditorm\Repository\Event\RepositoryEntityDeleted;
 use Kooditorm\Repository\Event\RepositoryEntityUpdated;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class CleanCacheRepository implements ListenerInterface
 {
-    /** 与 GenTableCacheKeyMapping::MAPPING_PREFIX 保持一致 */
-    private const MAPPING_PREFIX = 'repo:tk:';
-
-    /** 与 GenTableCacheKeyMapping::TABLES_SET 保持一致 */
-    private const TABLES_SET = 'repo:tk:tables';
-
     public function __construct(protected CacheInterface $cache)
     {
 
@@ -40,10 +36,16 @@ class CleanCacheRepository implements ListenerInterface
         ];
     }
 
+    /**
+     * @param  object  $event
+     * @return void
+     * @throws InvalidArgumentException
+     *
+     */
     public function process(object $event): void
     {
         $table = $event->getRepository()->getModel()->getTable();
-        $hash  = self::MAPPING_PREFIX.$table;
+        $hash  = TCKMapping::hash($table);
 
         $store = $this->cache->getStore();
         $redis = $store->getConnection();
@@ -69,7 +71,7 @@ class CleanCacheRepository implements ListenerInterface
         // 整表映射已清空：删除 hash 并从表名索引中移除
         if ($redis->hLen($hash) === 0) {
             $redis->del($hash);
-            $redis->sRem(self::TABLES_SET, $table);
+            $redis->sRem(TCKMapping::TABLES_SET, $table);
         }
     }
 }
