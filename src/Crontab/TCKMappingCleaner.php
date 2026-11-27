@@ -27,7 +27,9 @@ class TCKMappingCleaner
     /**
      * 清理所有已过期的映射条目，返回清理的字段数
      */
-    #[Crontab(rule: '* * * * *', name: 'CleanExpiredTCKMapping', memo: '清理过期的表-缓存key映射')]
+    // 该任务仅为兜底清理（写操作时的 CleanCacheRepository 监听器才是主要清理路径），
+    // 过期残留不影响缓存正确性，因此无需高频执行；多节点部署时 onOneServer 避免重复扫描
+    #[Crontab(rule: '*/10 * * * *', name: 'CleanExpiredTCKMapping', onOneServer: true, memo: '清理过期的表-缓存key映射')]
     public function clean(): int
     {
         $store = $this->cache->getStore();
