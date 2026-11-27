@@ -37,6 +37,8 @@ class ConfigProvider
                     ],
                     'ignore_annotations' => [
                         'mixin',
+                        // 宿主未安装 hyperf/crontab 时跳过该注解，避免扫描报错
+                        'Hyperf\Crontab\Annotation\Crontab',
                     ],
                 ],
             ],

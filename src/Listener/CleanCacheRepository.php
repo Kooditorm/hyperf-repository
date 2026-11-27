@@ -23,6 +23,9 @@ class CleanCacheRepository implements ListenerInterface
     /** 与 GenTableCacheKeyMapping::MAPPING_PREFIX 保持一致 */
     private const MAPPING_PREFIX = 'repo:tk:';
 
+    /** 与 GenTableCacheKeyMapping::TABLES_SET 保持一致 */
+    private const TABLES_SET = 'repo:tk:tables';
+
     public function __construct(protected CacheInterface $cache)
     {
 
@@ -61,6 +64,12 @@ class CleanCacheRepository implements ListenerInterface
             // 必须走缓存驱动删除（驱动有自己的 key 前缀），不能直接 redis del
             $store->delete($key);
             $redis->hDel($hash, $key);
+        }
+
+        // 整表映射已清空：删除 hash 并从表名索引中移除
+        if ($redis->hLen($hash) === 0) {
+            $redis->del($hash);
+            $redis->sRem(self::TABLES_SET, $table);
         }
     }
 }
