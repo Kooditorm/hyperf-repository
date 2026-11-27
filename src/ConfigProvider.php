@@ -15,7 +15,7 @@ namespace Kooditorm\Repository;
 use Kooditorm\Repository\Cache\CacheRepository;
 use Kooditorm\Repository\Contracts\CacheInterface;
 use Kooditorm\Repository\Listener\CleanCacheRepository;
-use Kooditorm\Repository\Listener\GenTableCacheKeyMapping;
+use Kooditorm\Repository\Listener\GenTCKMapping;
 
 class ConfigProvider
 {
@@ -27,7 +27,7 @@ class ConfigProvider
             ],
             'listeners' => [
                 CleanCacheRepository::class,
-                GenTableCacheKeyMapping::class
+                GenTCKMapping::class
             ],
             'commands' => [],
             'annotations' => [
