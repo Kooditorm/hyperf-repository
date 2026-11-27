@@ -17,16 +17,6 @@ use Kooditorm\Repository\Cache\TCKMapping;
 use Kooditorm\Repository\Contracts\CacheInterface;
 use Redis;
 
-/**
- * 定时清理过期的「表 → 缓存 key」映射条目。
- *
- * 惰性清理（CleanCacheRepository）只覆盖发生写操作的表，
- * 冷表的映射 hash 会一直残留，需要定时任务兜底。
- *
- * 本类通过 #[Crontab] 注解随包扫描自动注册，无需宿主额外配置。
- * 前提：宿主安装 hyperf/crontab 并在 config/autoload/crontab.php 中开启 enable。
- * 未安装该组件时，ConfigProvider 的 ignore_annotations 会跳过此注解，不影响启动。
- */
 class TCKMappingCleaner
 {
     public function __construct(protected CacheInterface $cache)
